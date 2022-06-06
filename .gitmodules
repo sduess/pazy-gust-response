@@ -1,0 +1,6 @@
+[submodule "lib/pazy-model"]
+	path = lib/pazy-model
+	url = https://github.com/ngoiz/pazy-model
+[submodule "lib/sharpy"]
+	path = lib/sharpy
+	url = https://github.com/ImperialCollegeLondon/sharpy/
