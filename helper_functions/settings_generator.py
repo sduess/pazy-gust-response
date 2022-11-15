@@ -226,9 +226,15 @@ class SettingsGenerator():
                                                              'u_inf_direction': [1., 0, 0]}
 
 
-        if kwargs.get('export_induced_velocities', True):
-            self.settings['DynamicCoupled']['postprocessors_settings']['AerogridPlot']['include_velocities'] = True
-            self.settings['DynamicCoupled']['postprocessors_settings']['AerogridPlot']['save_induced_velocities'] = True
+        # if kwargs.get('export_induced_velocities', True):
+        #     self.settings['DynamicCoupled']['postprocessors_settings']['AerogridPlot']['include_velocities'] = True
+        #     self.settings['DynamicCoupled']['postprocessors_settings']['AerogridPlot']['save_induced_velocities'] = True
+
+        self.settings['StepUvlm']['cfl1'] = True
+        self.settings['StaticUvlm']['cfl1'] = True
+        # self.settings['AerogridLoader']['wake_shape_generator_input']['ndx1'] = 80 #[80, 80, 16, 16]
+        # self.settings['AerogridLoader']['wake_shape_generator_input']['r'] =  1. #[1., 1., 1.5, 1.5]
+        # self.settings['AerogridLoader']['wake_shape_generator_input']['dxmax'] = 0.1/self.surface_m #[0.1/self.surface_m, 0.1/self.surface_m, 0.1/self.surface_m*2, 0.1/self.surface_m*2]
 
     def add_write_variables_time_settings(self, **kwargs):
         # if not ('WriteVariablesTime' in self.settings['SHARPy']['flow']):
