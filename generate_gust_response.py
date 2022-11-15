@@ -13,20 +13,22 @@ from pazy_wing_model import PazyWing
 
 import sharpy.utils.algebra as algebra
 
-def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, u_inf = 1, rho = 1.225, surface_m = 4, gust_vanes = False, alpha = np.deg2rad(5.), symmetry_condition = False):
+def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, u_inf = 1, rho = 1.225, surface_m = 4, gust_vanes = False, alpha = np.deg2rad(5.), symmetry_condition = False, delft_model = False):
      # simulation settings
     config = configobj.ConfigObj()
     config.filename = case_route + '/{}.sharpy'.format(case_name)
     settings = dict()
-    gravity = bool(not gust_vanes)
+    gravity = True #bool(not gust_vanes)
     n_step = 5
     structural_relaxation_factor = 0.6
     relaxation_factor = 0.2
     tolerance = 1e-6 #
     fsi_tolerance = 1e-4 #8
     num_cores = 4
+    variable_wake =  False #gust_vanes
 
-    u_inf = 18
+    u_inf = 18.
+    rho = 1.205
     # geometry parameters 
     chord = 0.1
     # if gust_vanes:
@@ -35,46 +37,54 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     CFL = 1
     dt = CFL * chord / surface_m / u_inf
     # dtu_inf  = 2.5e-4
-    n_tstep = 200# 2000
-    alpha = np.deg2rad(0.)
+    n_tstep = 10000
+    alpha = np.deg2rad(10.)
     # # Test case 1
     # alpha = np.deg2rad(5.)
-    # frequency_gust = 5.7 # Hz
-    # gust_T = 0.175439 #s 
-    # gust_amplitude = 0.805562
+    gust_frequency = 5.7 # Hz
+    gust_T = 0.175439 #s 
+    gust_amplitude = 0.805562
     # Test case 2
-    alpha = np.deg2rad(10.)
-    frequency_gust = 3.2 # Hz
-    gust_amplitude = 0.64458
-    gust_T = 0.312500000000000
+    # alpha = np.deg2rad(10.)
+    # frequency_gust = 3.2 # Hz
+    # gust_amplitude = 0.64458
+    # gust_T = 0.312500000000000
 
     
 
     wake_length = 20
     settings['SHARPy'] = {
         'flow': ['BeamLoader',
-                #  'Modal',
+                 'Modal',
                  'AerogridLoader',
                  'BeamPlot',
                  'AerogridPlot',
                 #  'StaticUvlm',
                  'StaticCoupled',
-                #  'Modal',
-                 'BeamPlot',
-                 'AerogridPlot',
-                 'DynamicCoupled',
+                 'AeroForcesCalculator',
+                 'LiftDistribution',
+                 'Modal',
+                #  'BeamPlot',
+                #  'AerogridPlot',
+                #  'DynamicCoupled',
                 'SaveData'
                  ],
         'case': case_name, 'route': case_route,
         'write_screen': 'on', 'write_log': 'on',
         'log_folder': output_folder + '/' + case_name + '/',
         'log_file': case_name + '.log'}
-
-
+    print("\n\nALPHA  = ", alpha)
+    print("delft model = ", delft_model)
+    if delft_model:
+        orientation =  algebra.euler2quat(np.array([0,
+                                                    0,
+                                                    alpha]))
+    else:
+        orientation =  algebra.euler2quat(np.array([0.,
+                                                    alpha,
+                                                    0]))
     settings['BeamLoader'] = {'unsteady': 'on',
-                              'orientation': algebra.euler2quat(np.array([0.,
-                                                                          alpha,
-                                                                          0]))}
+                              'orientation': orientation}
 
     settings['AerogridLoader'] = {
         'unsteady': 'on',
@@ -94,7 +104,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                    'gravity_on': gravity,
                                    'relaxation_factor': 0.1,
                                    'gravity': 9.81}
-
+    settings['AeroForcesCalculator'] =  {'write_text_file': 'off',
+                                         'screen_output': 'on'}
     print("symmetry_condition = ", symmetry_condition)
     settings['StaticUvlm'] = {
             'rho': rho, # Check why?? 1e-8,
@@ -155,18 +166,20 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                         'write_modes_vtk': 'off',
                         'use_undamped_modes': 'on'}
 
-    # if gust_vanes: 
-    #     cs_deflection_file = '/home/sduess/Documents/Aircraft Models/Pazy/pazy-gust-response/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(gust_settings['amplitude'], gust_settings['frequency'], gust_settings['mean'])
-    #     time = np.linspace(0., n_tstep * dt, n_tstep)
-    #     cs_deflection_prescribed = float(gust_settings['amplitude']) * np.sin(2 * np.pi * float(gust_settings['frequency']) * time)
-    #     np.savetxt(cs_deflection_file, cs_deflection_prescribed)
+    if gust_vanes: 
+        cs_deflection_file = '/home/sduess/Documents/Aircraft Models/Pazy/pazy-gust-response/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(gust_amplitude, gust_frequency, 0)
+        time = np.linspace(0., n_tstep * dt, n_tstep)
+        cs_deflection_prescribed = float(gust_amplitude) * np.sin(2 * np.pi * float(gust_frequency) * time)
+        np.savetxt(cs_deflection_file, cs_deflection_prescribed)
+
+        
     settings['StepUvlm'] = {'num_cores': num_cores,
                             'convection_scheme': 3,
                             'gamma_dot_filtering': 7,
-                            'cfl1': True,
-                            # 'velocity_field_generator': 'SteadyVelocityField',
-                            # 'velocity_field_input': {'u_inf':u_inf,
-                            #                         'u_inf_direction': [1., 0, 0]},
+                            'cfl1': variable_wake,
+                            'velocity_field_generator': 'SteadyVelocityField',
+                            'velocity_field_input': {'u_inf':u_inf,
+                                                    'u_inf_direction': [1., 0, 0]},
                             # 'control_surface_deflection' : ['DynamicControlSurface'],
                             # 'control_surface_deflection_generator_settings': {'0': {'dt': dt,'deflection_file': cs_deflection_file},},
                             'velocity_field_generator': 'GustVelocityField',

@@ -214,9 +214,9 @@ class SettingsGenerator():
         
         # print("\n\n\n\ngust vane mstar = ", gust_vane_parameters['M_star'])
         self.settings['AerogridLoader']['gust_vanes'] = True
-        self.settings['AerogridLoader']['gust_vanes_generator_settings'] = {'n_vanes': int(n_vanes[0]),
-                                                                       'streamwise_position': streamwise_position[0],
-                                                                       'vertical_position': vertical_position[0],
+        self.settings['AerogridLoader']['gust_vanes_generator_settings'] = {'n_vanes': n_vanes,
+                                                                       'streamwise_position': streamwise_position,
+                                                                       'vertical_position': vertical_position,
                                                                        'symmetry_condition': self.symmetry_condition,
                                                                        'vane_parameters': gust_vane_parameters
                                                                       }
