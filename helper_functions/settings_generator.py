@@ -218,7 +218,8 @@ class SettingsGenerator():
                                                                        'streamwise_position': streamwise_position,
                                                                        'vertical_position': vertical_position,
                                                                        'symmetry_condition': self.symmetry_condition,
-                                                                       'vane_parameters': gust_vane_parameters
+                                                                       'vane_parameters': gust_vane_parameters,
+                                                                       '1-cosine_discretisation': False,
                                                                       }
         self.settings['StepUvlm']['convection_scheme'] = 3
         self.settings['StepUvlm']['velocity_field_generator'] = 'SteadyVelocityField'
