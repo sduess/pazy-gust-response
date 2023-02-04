@@ -29,7 +29,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     fsi_tolerance = 1e-4 #
     num_cores = 4
     variable_wake =  False 
-
+    horseshoe = True
     u_inf = 18.3
     rho = 1.205
 
@@ -44,8 +44,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     gust_amplitude = 0.805562
 
     if test_case_settings is not None:
-        print("TEST CASE:", test_case_settings)
         alpha = test_case_settings['alpha'] 
+        u_inf = test_case_settings['u_inf'] 
         gust_T = test_case_settings['gust_T']
         gust_frequency = test_case_settings['frequency_gust_vane']
         gust_amplitude = test_case_settings['gust_amplitude']
@@ -55,19 +55,21 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     wake_length = 20
     settings['SHARPy'] = {
         'flow': ['BeamLoader',
-                 'Modal',
+                #  'Modal',
                  'AerogridLoader',
                  'BeamPlot',
                  'AerogridPlot',
                 #  'StaticUvlm',
                  'StaticCoupled',
                  'AeroForcesCalculator',
+                 'AeroForcesCalculator',
                  'LiftDistribution',
-                 'Modal',
+                #  'Modal',
                 #  'BeamPlot',
-                #  'AerogridPlot',
+                 'AerogridPlot',
                  'DynamicCoupled',
-                'SaveData'
+                'SaveData',
+                'PickleData'
                  ],
         'case': case_name, 'route': case_route,
         'write_screen': 'on', 'write_log': 'on',
@@ -104,13 +106,16 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                    'gravity_on': gravity,
                                    'relaxation_factor': 0.1,
                                    'gravity': 9.81}
-    settings['AeroForcesCalculator'] =  {'write_text_file': 'off',
-                                         'screen_output': 'on'}
+    settings['AeroForcesCalculator'] =  {'write_text_file': 'on',
+                                         'screen_output': 'on',
+                                         'coefficients': False,
+                                         'q_ref': 0.5*rho*u_inf**2,
+                                         'S_ref': 0.1*0.55}
     print("symmetry_condition = ", symmetry_condition)
     settings['StaticUvlm'] = {
             'rho': rho, # Check why?? 1e-8,
             'print_info': True,
-            'horseshoe': 'off',
+            'horseshoe': horseshoe,
             'num_cores': num_cores,
             'n_rollup': 0, #settings['AerogridLoader']['mstar'],
             'rollup_dt': dt,
@@ -134,7 +139,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         'aero_solver_settings':  {
             'rho': rho, # Check why?? 1e-8,
             'print_info': True,
-            'horseshoe': False,
+            'horseshoe': horseshoe,
             'num_cores': num_cores,
             'n_rollup': 0, #settings['AerogridLoader']['mstar'],
             'rollup_dt': dt,
@@ -171,14 +176,19 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                         'use_undamped_modes': 'on'}
 
     if gust_vanes: 
+        # define gust vane deflection
+        gust_settings = {'amplitude': np.deg2rad(5.),
+                        'frequency': 5.7,
+                        'mean': 0.}
+        if test_case_settings is not None:
+            gust_settings['frequency'] = test_case_settings['frequency_gust_vane']
         cs_deflection_file = '/home/sduess/Documents/Aircraft Models/Pazy/pazy-gust-response/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(gust_amplitude, gust_frequency, 0)
-        time = np.linspace(0., n_tstep * dt, n_tstep)
-        cs_deflection_prescribed = float(gust_amplitude) * np.sin(2 * np.pi * float(gust_frequency) * time)
-        np.savetxt(cs_deflection_file, cs_deflection_prescribed)
+        cs_deflection_file = write_deflection_file(n_tstep, dt,  gust_settings['amplitude'],  gust_settings['frequency'],  gust_settings['mean'])
+
 
         
     settings['StepUvlm'] = {'num_cores': num_cores,
-                            'convection_scheme': 2,
+                            'convection_scheme': 3,
                             'gamma_dot_filtering': 7,
                             'cfl1': bool(not variable_wake),
                             # 'velocity_field_generator': 'SteadyVelocityField',
@@ -243,15 +253,16 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     }
 
     if gust_vanes:
+        wake_length_vanes= 5
         gust_vane_parameters = {
-            'M': 8,
-            'N':20, #, 
-            'M_star': 100, 
+            'M': surface_m*3,
+            'N':40, #, 
+            'M_star': int(wake_length_vanes/(dt *u_inf)), 
             'span': 5, #10., 
             'chord': 0.3, 
             'control_surface_deflection_generator_settings': {
                 'dt': dt, 
-                'deflection_file': '/home/sduess/Documents/Aircraft Models/Pazy/pazy-gust-response/02_gust_vanes/cs_deflection_amplitude_0.08726646259971647_frequency_5.7_mean_0.0.csv' 
+                'deflection_file': cs_deflection_file
             }
         }
 
@@ -319,26 +330,61 @@ def setup_pazy_model(case_name, case_route, pazy_settings, gust_vanes = False, s
     pazy.save_files()
     return pazy
 
+def write_deflection_file(n_tstep, dt, amplitude, frequency, mean):
+    cs_deflection_file = '/home/sduess/Documents/Aircraft Models/Pazy/pazy-gust-response/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(amplitude, frequency, mean)
+    time = np.linspace(0., n_tstep * dt, n_tstep)
+    cs_deflection_prescribed = float(amplitude) * np.sin(2 * np.pi * float(frequency) * time) #* np.exp(-0.9 * time)
+
+    import matplotlib.pyplot as plt
+    plt.plot(time, np.rad2deg(cs_deflection_prescribed))
+    
+    # cs_deflection_prescribed = float(amplitude) * np.sin(2 * np.pi * float(frequency) * time  + np.pi/2)
+    initial_deflection = cs_deflection_prescribed[0]
+    # plt.plot(time, cs_deflection_prescribed_shifted, '--')
+    plt.show()
+    print("find closest to amplitude = ", find_index_of_closest_entry(cs_deflection_prescribed, float(amplitude)))
+    n_tsteps_wo_deflection = 10
+    cs_deflection_prescribed = np.insert(cs_deflection_prescribed, 0 , initial_deflection * np.ones((n_tsteps_wo_deflection)))
+    cs_deflection_prescribed = np.delete(cs_deflection_prescribed,list(range(n_tstep- n_tsteps_wo_deflection, n_tstep)))
+    np.savetxt(cs_deflection_file, cs_deflection_prescribed)
+
+    return cs_deflection_file
+
+def find_index_of_closest_entry(array_values, target_value):
+    return np.argmin(np.abs(array_values - target_value))
 
 def generate_polar_arrays(airfoils):
     # airfoils = {name: filename}
+    # Return a aoa (rad), cl, cd, cm for each airfoil
+    out_data = [None] * len(airfoils)
+    for airfoil_index, airfoil_filename in airfoils.items():
+        out_data[airfoil_index] = np.loadtxt(airfoil_filename, skiprows=12)[:, :4]
+        if any(out_data[airfoil_index][:, 0] > 1):
+            # provided polar is in degrees so changing it to radians
+            out_data[airfoil_index][:, 0] *= np.pi / 180
+    return out_data
+
+def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./cases/', output_folder='./output/', gust_vanes = False, symmetry_condition = False, test_case_settings = None, airfoil_polar=None, case = 1, use_polars=False, efficiency_correction=False):
     # pazy model settings
     # Norberto:  M = 16, N = 64
     pazy_model_settings = {'skin_on': skin_on,
                         'discretisation_method': 'michigan',
                         'model_id': 'delft',
                         'num_elem': 2,
-                        'surface_m': 16,
+                        'surface_m': 8, #16,
                         'symmetry_condition': symmetry_condition,
+                        # 'polars':generate_polar_arrays(airfoil_polar)
                         }
     case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic_coarse_gust_vanes'.format(case, int(use_polars)) #_alpha_{:04g}'.format(100*test_case_settings['alpha']) #pazy_dynamic_alpha_587_gust_vane_test' #'pazy_modal_delft_aplha_12_symmetry_steady'
+    # case_name = 'pazy_vertical_alpha_{:02g}_polars{:g}'.format(test_case_settings['alpha'], int(use_polars))
+    # case_name = 'pazy_vertical_case_{}_polars{:g}'.format(case, int(use_polars))
     case_route = case_root + '/' + case_name + '/'
 
     if not os.path.isdir(case_route):
         os.makedirs(case_route, exist_ok=True)
-
+    # print("airfoil polar = ", generate_polar_arrays(airfoil_polar))
     if airfoil_polar is not None:
-
+        polar_arrays=generate_polar_arrays(airfoil_polar)
     else:
         polar_arrays = None
     setup_pazy_model(case_name, 
