@@ -8,6 +8,8 @@ def setup_pazy_model(case_name, case_route, pazy_settings, symmetry_condition = 
     pazy.generate_structure()
     if not symmetry_condition:
         pazy.structure.mirror_wing()
+    if pazy_settings['model_id'] == 'delft':
+        pazy.structure.rotate_wing()
     pazy.generate_aero()
 
     pazy.save_files()

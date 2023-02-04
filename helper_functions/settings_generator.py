@@ -220,6 +220,8 @@ class SettingsGenerator():
                                                                        'symmetry_condition': self.symmetry_condition,
                                                                        'vane_parameters': gust_vane_parameters,
                                                                        '1-cosine_discretisation': False,
+                                                                       'vertical': False,
+                                                                       'wingtip_refinement_panels': 5,
                                                                       }
         self.settings['StepUvlm']['convection_scheme'] = 3
         self.settings['StepUvlm']['velocity_field_generator'] = 'SteadyVelocityField'

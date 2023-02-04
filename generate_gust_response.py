@@ -261,7 +261,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                                                        'vertical_position': [-0.25, 0.25],
                                                                        'symmetry_condition': symmetry_condition,
                                                                        'vane_parameters': [gust_vane_parameters, gust_vane_parameters],
-                                                                       'vertical': True
+                                                                       'vertical': delft_model
                                                                       }
     
         settings['StepUvlm']['convection_scheme'] = 3
