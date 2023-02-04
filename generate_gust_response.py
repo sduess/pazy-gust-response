@@ -13,7 +13,10 @@ from pazy_wing_model import PazyWing
 
 import sharpy.utils.algebra as algebra
 
-def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, u_inf = 1, rho = 1.225, surface_m = 4, gust_vanes = False, alpha = np.deg2rad(5.), symmetry_condition = False, delft_model = False, test_case_settings = None):
+
+route_test_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+
+def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, u_inf = 1, rho = 1.225, surface_m = 4, gust_vanes = False, alpha = np.deg2rad(5.), symmetry_condition = False, delft_model = False, test_case_settings = None, use_polars=False):
      # simulation settings
     config = configobj.ConfigObj()
     config.filename = case_route + '/{}.sharpy'.format(case_name)
@@ -267,7 +270,28 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                                         'u_inf_direction': [1., 0, 0]}
                                                                     
 
+    # settings['StaticCoupled']['correct_forces_method'] = 'EfficiencyCorrection'
+    # settings['DynamicCoupled']['correct_forces_method'] = 'EfficiencyCorrection'
+    if use_polars:
+        print("Settings for PolarCorrection!")
+        settings['StaticCoupled']['correct_forces_method'] = 'PolarCorrection'
+        settings['StaticCoupled']['correct_forces_settings'] = {'cd_from_cl': 'off',
+                                                                'correct_lift': 'on',
+                                                                'moment_from_polar': 'on',
+                                                                # 'skip_surfaces':[2,3],
+                                                                'aoa_cl0': [0., 0.],
+                                                                # 'write_induced_aoa': True,
+                                                                }
+                                                                
 
+        settings['DynamicCoupled']['correct_forces_method'] = 'PolarCorrection'
+        settings['DynamicCoupled']['correct_forces_settings'] = {'cd_from_cl': 'off',
+                                                                'correct_lift': 'on',
+                                                                'moment_from_polar': 'on',
+                                                                # 'skip_surfaces':[2,3],
+                                                                'aoa_cl0': [0., 0.],
+                                                                # 'write_induced_aoa': True,
+                                                                }
     for k, v in settings.items():
         config[k] = v
 
@@ -290,12 +314,14 @@ def setup_pazy_model(case_name, case_route, pazy_settings, gust_vanes = False, s
             pazy.structure.add_lumped_mass((tip_load, pazy.structure.n_node//2 + 1, np.zeros((3, 3)),
                                             np.array([0, mid_chord_b, 0])))
 
-    pazy.generate_aero() 
+
+    pazy.generate_aero(polars=polars) 
     pazy.save_files()
     return pazy
 
 
-def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./cases/', output_folder='./output/', gust_vanes = False, symmetry_condition = False, test_case_settings = None):
+def generate_polar_arrays(airfoils):
+    # airfoils = {name: filename}
     # pazy model settings
     # Norberto:  M = 16, N = 64
     pazy_model_settings = {'skin_on': skin_on,
@@ -305,19 +331,34 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                         'surface_m': 16,
                         'symmetry_condition': symmetry_condition,
                         }
-    case_name = 'pazy_vertical_case_1_gust_comp_1' #pazy_dynamic_alpha_587_gust_vane_test' #'pazy_modal_delft_aplha_12_symmetry_steady'
+    case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic_coarse_gust_vanes'.format(case, int(use_polars)) #_alpha_{:04g}'.format(100*test_case_settings['alpha']) #pazy_dynamic_alpha_587_gust_vane_test' #'pazy_modal_delft_aplha_12_symmetry_steady'
     case_route = case_root + '/' + case_name + '/'
 
     if not os.path.isdir(case_route):
         os.makedirs(case_route, exist_ok=True)
 
-    setup_pazy_model(case_name, case_route, pazy_model_settings, symmetry_condition = symmetry_condition,polars=None) #generate_polar_arrays(airfoil_polar))
+    if airfoil_polar is not None:
 
+    else:
+        polar_arrays = None
+    setup_pazy_model(case_name, 
+                     case_route, 
+                     pazy_model_settings, 
+                     symmetry_condition=symmetry_condition,
+                     polars=polar_arrays)
+    if airfoil_polar is not None:
+        use_polars = True
+    else:
     gust_settings= {'length': 5,
                     'offset': 0,
                     'intensity': 0.2,
                     }
-    set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, pazy_model_settings['surface_m'], gust_vanes = gust_vanes, symmetry_condition = symmetry_condition, delft_model = True, test_case_settings = test_case_settings)
+    set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, pazy_model_settings['surface_m'], 
+                                    gust_vanes = gust_vanes, 
+                                    symmetry_condition = symmetry_condition, 
+                                    delft_model = True, 
+                                    test_case_settings = test_case_settings,
+                                    use_polars=use_polars,)
 
     data = sharpy.sharpy_main.main(['', case_route + case_name + '.sharpy'])
     return data
@@ -334,7 +375,7 @@ if __name__ == '__main__':
                              'frequency_gust_vane': 3.2, #Hz
                              'gust_amplitude':0.3125}}
 
-    symmetry_condition = False # True
+    use_polars = False #True
     case = 1
     data = run_dynamic_prescriped_simulation_with_gust_input(skin_on='on',
                                                              case_root='./cases/',
