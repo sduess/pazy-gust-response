@@ -16,7 +16,7 @@ import sharpy.utils.algebra as algebra
 
 route_test_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
 
-def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, u_inf = 1, rho = 1.225, surface_m = 4, gust_vanes = False, alpha = np.deg2rad(5.), symmetry_condition = False, delft_model = False, test_case_settings = None, use_polars=False):
+def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, u_inf = 1, rho = 1.225, surface_m = 4, gust_vanes = False, alpha = np.deg2rad(5.), symmetry_condition = False, delft_model = False, test_case_settings = None, use_polars=False, efficiency_correction=False):
      # simulation settings
     config = configobj.ConfigObj()
     config.filename = case_route + '/{}.sharpy'.format(case_name)
@@ -167,6 +167,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                             'save_struct': True,
                             'save_linear': True,}
 
+    settings['PickleData'] = {}
 
     settings['Modal'] = {'NumLambda': 40,
                         'rigid_body_modes': 'off',
@@ -280,9 +281,9 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         settings['StepUvlm']['velocity_field_input'] = {'u_inf':u_inf,
                                                         'u_inf_direction': [1., 0, 0]}
                                                                     
-
-    # settings['StaticCoupled']['correct_forces_method'] = 'EfficiencyCorrection'
-    # settings['DynamicCoupled']['correct_forces_method'] = 'EfficiencyCorrection'
+    if efficiency_correction:
+        settings['StaticCoupled']['correct_forces_method'] = 'EfficiencyCorrection'
+        settings['DynamicCoupled']['correct_forces_method'] = 'EfficiencyCorrection'
     if use_polars:
         print("Settings for PolarCorrection!")
         settings['StaticCoupled']['correct_forces_method'] = 'PolarCorrection'
@@ -395,6 +396,7 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
     if airfoil_polar is not None:
         use_polars = True
     else:
+        use_polars = False
     gust_settings= {'length': 5,
                     'offset': 0,
                     'intensity': 0.2,
@@ -404,31 +406,50 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                                     symmetry_condition = symmetry_condition, 
                                     delft_model = True, 
                                     test_case_settings = test_case_settings,
-                                    use_polars=use_polars,)
+                                    use_polars=use_polars,
+                                    efficiency_correction=efficiency_correction)
 
     data = sharpy.sharpy_main.main(['', case_route + case_name + '.sharpy'])
     return data
 
 if __name__ == '__main__':
-
+    # alpha_vec = np.arange(-9, 15, 3)
     dict_test_cases = {'1': {'alpha': np.deg2rad(5.),
-                             'gust_T': 0.175439,
+                             'u_inf': 18.3,
+                             'gust_T': 0.3125,#0.175439,
                              'frequency_gust_vane': 5.7, #Hz
                              'gust_amplitude':0.805562,
                              },
                         '2': {'alpha': np.deg2rad(10.),
-                             'gust_T': 0.64458,
+                             'u_inf': 18.3,
+                             'gust_T': 0.175439, #0.3125,
                              'frequency_gust_vane': 3.2, #Hz
-                             'gust_amplitude':0.3125}}
+                             'gust_amplitude':0.64458}}
 
     use_polars = False #True
-    case = 1
+    airfoil_polar = None
+    efficiency_correction = False
+    if efficiency_correction and use_polars:
+        raise
+
+    gust_vanes = True
+    if use_polars:
+        airfoil_polar = {
+            0: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
+            1: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
+                        }
+    symmetry_condition = False # True #False 
+    case = 1 #2
     data = run_dynamic_prescriped_simulation_with_gust_input(skin_on='on',
-                                                             case_root='./cases/',
-                                                             output_folder='./output/',
-                                                             gust_vanes = False, #True,
-                                                             symmetry_condition = symmetry_condition,
-                                                             test_case_settings = dict_test_cases[str(case)]
-                                                             )
+                                                            case_root='./cases/',
+                                                            output_folder='./output/',
+                                                            gust_vanes = gust_vanes,
+                                                            symmetry_condition = symmetry_condition,
+                                                            test_case_settings = dict_test_cases[str(case)],
+                                                            airfoil_polar=airfoil_polar,
+                                                            case=case,
+                                                            use_polars=use_polars,
+                                                            efficiency_correction=efficiency_correction
+                                                            )
                                              
 
