@@ -16,12 +16,23 @@ import sharpy.utils.algebra as algebra
 
 route_test_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
 
-def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, u_inf = 1, rho = 1.225, surface_m = 4, gust_vanes = False, alpha = np.deg2rad(5.), symmetry_condition = False, delft_model = False, test_case_settings = None, use_polars=False, efficiency_correction=False):
+def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings,
+                                    u_inf = 1, 
+                                    rho = 1.225, 
+                                    surface_m = 4, 
+                                    gust_vanes = False,
+                                     alpha = np.deg2rad(5.), 
+                                     symmetry_condition = False, 
+                                     model_id = False,
+                                     test_case_settings = None, 
+                                     use_polars=False, 
+                                     efficiency_correction=False,
+                                     vertical=True):
      # simulation settings
     config = configobj.ConfigObj()
     config.filename = case_route + '/{}.sharpy'.format(case_name)
     settings = dict()
-    gravity = True
+    gravity = False
     n_step = 5
     structural_relaxation_factor = 0.6
     relaxation_factor = 0.2
@@ -50,7 +61,11 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         gust_frequency = test_case_settings['frequency_gust_vane']
         gust_amplitude = test_case_settings['gust_amplitude']
 
-    
+    gust_component = 2
+    symmetry_plane = 1
+    if vertical:
+        gust_component -= 1
+        symmetry_plane += 1
 
     wake_length = 20
     settings['SHARPy'] = {
@@ -76,8 +91,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         'log_folder': output_folder + '/' + case_name + '/',
         'log_file': case_name + '.log'}
     print("\n\nALPHA  = ", alpha)
-    print("delft model = ", delft_model)
-    if delft_model:
+    print("delft model = ", model_id)
+    if vertical:
         orientation =  algebra.euler2quat(np.array([0,
                                                     0,
                                                     alpha]))
@@ -127,7 +142,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                 'u_inf_direction': [1.0, 0., 0.]},
             'vortex_radius': 1e-9,
             'symmetry_condition': symmetry_condition,
-            'symmetry_plane': 2
+            'symmetry_plane': symmetry_plane
         }
     settings['StaticCoupled'] = {
         'print_info': 'on',
@@ -151,7 +166,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                 'u_inf_direction': [1.0, 0., 0.]},
             'vortex_radius': 1e-9,
             'symmetry_condition': symmetry_condition,
-            'symmetry_plane': 2
+            'symmetry_plane': symmetry_plane
         },
         'structural_solver': 'NonLinearStatic',
         'structural_solver_settings': settings['NonLinearStatic']}
@@ -187,7 +202,6 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         cs_deflection_file = write_deflection_file(n_tstep, dt,  gust_settings['amplitude'],  gust_settings['frequency'],  gust_settings['mean'])
 
 
-        
     settings['StepUvlm'] = {'num_cores': num_cores,
                             'convection_scheme': 3,
                             'gamma_dot_filtering': 7,
@@ -203,14 +217,14 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                                     'gust_shape': 'continuous_sin',
                                                     'gust_parameters': {'gust_length':  gust_T * u_inf, #gust_settings['length'],
                                                                         'gust_intensity': 2*gust_amplitude, # gust_settings['intensity']*u_inf,
-                                                                        'gust_component': 1
+                                                                        'gust_component': gust_component
                                                                     }                                                                
                                                 },
                             'rho': rho,
                             'n_time_steps': n_tstep,
                             'dt': dt,
                             'symmetry_condition': symmetry_condition,
-                            'symmetry_plane': 2
+                            'symmetry_plane': symmetry_plane
                             }
 
     settings['NonLinearDynamicPrescribedStep'] = {'print_info': 'on',
@@ -273,7 +287,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                                                        'vertical_position': [-0.25, 0.25],
                                                                        'symmetry_condition': symmetry_condition,
                                                                        'vane_parameters': [gust_vane_parameters, gust_vane_parameters],
-                                                                       'vertical': delft_model
+                                                                       'vertical': vertical
                                                                       }
     
         settings['StepUvlm']['convection_scheme'] = 3
@@ -310,12 +324,12 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     config.write()
     return settings
 
-def setup_pazy_model(case_name, case_route, pazy_settings, gust_vanes = False, symmetry_condition = False, polars=None):
+def setup_pazy_model(case_name, case_route, pazy_settings, gust_vanes = False, symmetry_condition = False, polars=None, vertical=True):
     pazy = PazyWing(case_name, case_route, pazy_settings)
     pazy.generate_structure()
     if not symmetry_condition:
         pazy.structure.mirror_wing()
-    if pazy_settings['model_id'] == 'delft':
+    if vertical:
         pazy.structure.rotate_wing()
     tip_load = 0# 0.285
     if tip_load > 0.:
@@ -365,18 +379,27 @@ def generate_polar_arrays(airfoils):
             out_data[airfoil_index][:, 0] *= np.pi / 180
     return out_data
 
-def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./cases/', output_folder='./output/', gust_vanes = False, symmetry_condition = False, test_case_settings = None, airfoil_polar=None, case = 1, use_polars=False, efficiency_correction=False):
+def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./cases/', output_folder='./output/', 
+                                                      gust_vanes = False, 
+                                                      symmetry_condition = False, 
+                                                      test_case_settings = None, 
+                                                      airfoil_polar=None, 
+                                                      case = 1, 
+                                                      use_polars=False, 
+                                                      efficiency_correction=False,
+                                                      model_id='delft',
+                                                      vertical=True):
     # pazy model settings
     # Norberto:  M = 16, N = 64
     pazy_model_settings = {'skin_on': skin_on,
                         'discretisation_method': 'michigan',
-                        'model_id': 'delft',
+                        'model_id': model_id,
                         'num_elem': 2,
-                        'surface_m': 8, #16,
+                        'surface_m': 16, #16,
                         'symmetry_condition': symmetry_condition,
                         # 'polars':generate_polar_arrays(airfoil_polar)
                         }
-    case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic_coarse_gust_vanes'.format(case, int(use_polars)) #_alpha_{:04g}'.format(100*test_case_settings['alpha']) #pazy_dynamic_alpha_587_gust_vane_test' #'pazy_modal_delft_aplha_12_symmetry_steady'
+    case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic_gust_vanes'.format(case, int(use_polars)) #_alpha_{:04g}'.format(100*test_case_settings['alpha']) #pazy_dynamic_alpha_587_gust_vane_test' #'pazy_modal_delft_aplha_12_symmetry_steady'
     # case_name = 'pazy_vertical_alpha_{:02g}_polars{:g}'.format(test_case_settings['alpha'], int(use_polars))
     # case_name = 'pazy_vertical_case_{}_polars{:g}'.format(case, int(use_polars))
     case_route = case_root + '/' + case_name + '/'
@@ -392,7 +415,8 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                      case_route, 
                      pazy_model_settings, 
                      symmetry_condition=symmetry_condition,
-                     polars=polar_arrays)
+                     polars=polar_arrays,
+                     vertical=vertical)
     if airfoil_polar is not None:
         use_polars = True
     else:
@@ -404,10 +428,11 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
     set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, pazy_model_settings['surface_m'], 
                                     gust_vanes = gust_vanes, 
                                     symmetry_condition = symmetry_condition, 
-                                    delft_model = True, 
+                                    model_id = model_id, 
                                     test_case_settings = test_case_settings,
                                     use_polars=use_polars,
-                                    efficiency_correction=efficiency_correction)
+                                    efficiency_correction=efficiency_correction,
+                                    vertical=vertical)
 
     data = sharpy.sharpy_main.main(['', case_route + case_name + '.sharpy'])
     return data
@@ -425,21 +450,31 @@ if __name__ == '__main__':
                              'gust_T': 0.175439, #0.3125,
                              'frequency_gust_vane': 3.2, #Hz
                              'gust_amplitude':0.64458}}
+    
+    # for icase in list(dict_test_cases.keys()):
+    #     dict_test_cases[icase]['gust_T'] = dict_test_cases[icase]['frequency_gust_vane']/dict_test_cases[icase]['u_inf']
+    
 
+    vertical = True #False
+    model_id = 'delft'
     use_polars = False #True
     airfoil_polar = None
     efficiency_correction = False
     if efficiency_correction and use_polars:
         raise
 
-    gust_vanes = True
+    gust_vanes = True #False
     if use_polars:
         airfoil_polar = {
             0: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
             1: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
                         }
     symmetry_condition = False # True #False 
-    case = 1 #2
+    case = 2 #2
+    # print("alpha vec", alpha_vec)
+    # for alpha in alpha_vec:
+    #     dict_test_cases[str(case)]['alpha'] = alpha
+    #     print(alpha)
     data = run_dynamic_prescriped_simulation_with_gust_input(skin_on='on',
                                                             case_root='./cases/',
                                                             output_folder='./output/',
@@ -449,7 +484,9 @@ if __name__ == '__main__':
                                                             airfoil_polar=airfoil_polar,
                                                             case=case,
                                                             use_polars=use_polars,
-                                                            efficiency_correction=efficiency_correction
+                                                            efficiency_correction=efficiency_correction,
+                                                            model_id=model_id,
+                                                            vertical=vertical
                                                             )
                                              
 
