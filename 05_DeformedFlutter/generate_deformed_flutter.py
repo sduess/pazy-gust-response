@@ -1,21 +1,10 @@
-"""
- Script to generate results for straight wing flutter (neglecting the influence of the deformed
- wing shape on the instabilities) taken from https://github.com/ngoiz/pazy-sharpy/tree/master/04_StraightWingFlutter.
-
-"""
-
 import numpy as np
 import os
-import unittest
-import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "lib/pazy-model"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "lib/sharpy"))
-from pazy_wing_model import PazyWing
 import sharpy.sharpy_main
+from pazy_wing_model import PazyWing
 import sharpy.utils.algebra as algebra
 
 
-# Problem Set up
 def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder='', **kwargs):
     # u_inf = 60
     alpha_deg = kwargs.get('alpha', 0.)
@@ -30,9 +19,8 @@ def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder=''
     N = kwargs.get('N', 32)
     M_star_fact = kwargs.get('Ms', 10)
 
-    route_test_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
-
     # SHARPy nonlinear reference solution
+    route_test_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
     case_route = route_test_dir + '/cases/' + cases_subfolder + '/' + case_name
     if not os.path.exists(case_route):
         os.makedirs(case_route)
@@ -41,11 +29,12 @@ def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder=''
                       'discretisation_method': 'michigan',
                       'num_elem': N,
                       'surface_m': M,
-                      'num_surfaces': 2}
+                      'num_surfaces': 2,
+                      'model_id': 'prepazy'}
 
     pazy = PazyWing(case_name=case_name, case_route=case_route, in_settings=model_settings)
-    pazy.create_aeroelastic_model()
 
+    pazy.create_aeroelastic_model()
     if trailing_edge_weight:
         te_mass = 10e-3  # 10g
         trailing_edge_b = (pazy.get_ea_reference_line() - 1.0) * 0.1
@@ -53,7 +42,6 @@ def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder=''
                                         np.array([0, trailing_edge_b, 0])))
         pazy.structure.add_lumped_mass((te_mass, pazy.structure.n_node//2 + 1, np.zeros((3, 3)),
                                         np.array([0, trailing_edge_b, 0])))
-
     pazy.save_files()
 
     u_inf_direction = np.array([1., 0., 0.])
@@ -63,20 +51,24 @@ def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder=''
         'flow':
             ['BeamLoader',
              'AerogridLoader',
-             'StaticUvlm',
+             'StaticCoupled',
+             'AerogridPlot',
+             'BeamPlot',
+             'WriteVariablesTime',
+             # 'DynamicCoupled',
              'Modal',
              'LinearAssembler',
-             'AsymptoticStability'
+             'AsymptoticStability',
+             'SaveParametricCase',
              ],
         'case': pazy.case_name, 'route': pazy.case_route,
         'write_screen': 'on', 'write_log': 'on',
-        'save_settings': 'on',
         'log_folder': route_test_dir + output_folder + pazy.case_name + '/',
         'log_file': pazy.case_name + '.log'}
 
     pazy.config['BeamLoader'] = {
-                                'unsteady': 'off',
-                                'orientation': algebra.euler2quat([0, alpha_deg * np.pi/180, 0])}
+        'unsteady': 'off',
+        'orientation': algebra.euler2quat([0., alpha_deg * np.pi / 180, 0])}
 
     pazy.config['AerogridLoader'] = {
         'unsteady': 'off',
@@ -100,9 +92,7 @@ def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder=''
         'num_cores': 4,
         'n_rollup': 0,
         'rollup_aic_refresh': 0,
-        'rollup_tolerance': 1e-4,
-        'vortex_radius': 1e-10,
-    }
+        'rollup_tolerance': 1e-4}
 
     settings = dict()
     settings['NonLinearStatic'] = {'print_info': 'off',
@@ -129,11 +119,11 @@ def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder=''
             'rollup_dt': dt,
             'rollup_aic_refresh': 1,
             'rollup_tolerance': 1e-4,
+            'vortex_radius': 1e-7,
             'velocity_field_generator': 'SteadyVelocityField',
             'velocity_field_input': {
                 'u_inf': u_inf,
-                'u_inf_direction': u_inf_direction},
-            'vortex_radius': 1e-10},
+                'u_inf_direction': u_inf_direction}},
         'structural_solver': 'NonLinearStatic',
         'structural_solver_settings': settings['NonLinearStatic']}
 
@@ -149,9 +139,12 @@ def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder=''
     pazy.config['BeamPlot'] = {'include_rbm': 'off',
                              'include_applied_forces': 'on'}
 
+    pazy.config['BeamCsvOutput'] = {'output_pos': 'on',
+                                  'output_psi': 'on',
+                                  'screen_output': 'on'}
+
     pazy.config['WriteVariablesTime'] = {'structure_variables': ['pos'],
-                                         'cleanup_old_solution': 'on',
-                                       'structure_nodes': list(range(0, pazy.structure.n_node//2))}
+                                        'structure_nodes': list(range(0, pazy.structure.n_node//2))}
 
     pazy.config['Modal'] = {'NumLambda': 20,
                             'rigid_body_modes': 'off',
@@ -186,82 +179,137 @@ def generate_pazy(u_inf, case_name, output_folder='/output/', cases_subfolder=''
                                                             'density': rho,
                                                             'remove_predictor': 'off',
                                                             'use_sparse': 'on',
-                                                            # 'rigid_body_motion': 'off',
-                                                            # 'use_euler': 'off',
                                                             'remove_inputs': ['u_gust'],
-                                                            'vortex_radius': 1e-10,
-                                                            'rom_method': ['Krylov'],
-                                                            'rom_method_settings':
-                                                                {'Krylov':
-                                                                     {'frequency': [0.],
-                                                                      'algorithm': 'mimo_rational_arnoldi',
-                                                                      'r': 6,
-                                                                      'single_side': 'observability',
-                                                                      }
-                                                                 }
+                                                            'vortex_radius': 1e-8,
+                                                            # 'rom_method': ['Krylov'],
+                                                            # 'rom_method_settings':
+                                                            #     {'Krylov':
+                                                            #          {'frequency': [0.],
+                                                            #           'algorithm': 'mimo_rational_arnoldi',
+                                                            #           'r': 6,
+                                                            #           'single_side': 'observability',
+                                                            #           }
+                                                            #      }
                                                             },
                                         #   'rigid_body_motion': False
                                           }
                                       }
 
     pazy.config['AsymptoticStability'] = {'print_info': True,
-                                        #   'folder': route_test_dir + output_folder,
                                           'export_eigenvalues': 'on',
                                           'target_system': ['aeroelastic', 'aerodynamic', 'structural'],
-                                          'velocity_analysis': [10, 100, 91]
+                                          'reference_velocity': u_inf,
                                           }
 
-    pazy.config['SaveParametricCase'] = {'folder': route_test_dir + output_folder + pazy.case_name + '/',
-                                         'save_case': 'off',
+    pazy.config['SaveParametricCase'] = {'save_case': 'off',
                                          'parameters': {'u_inf': u_inf}}
+
+    settings = dict()
+    settings['NonLinearDynamicPrescribedStep'] = {'print_info': 'on',
+                                                  'max_iterations': 950,
+                                                  'delta_curved': 1e-6,
+                                                  'min_delta': 1e-8,
+                                                  'newmark_damp': 5e-4,
+                                                  'gravity_on': 'on',
+                                                  'gravity': 9.81,
+                                                  'num_steps': 1,
+                                                  'dt': dt}
+    
+    settings['StepUvlm'] = {'print_info': 'on',
+                            'horseshoe': 'off',
+                            'num_cores': 4,
+                            'n_rollup': 100,
+                            'convection_scheme': 2,
+                            'rollup_dt': dt,
+                            'rollup_aic_refresh': 1,
+                            'rollup_tolerance': 1e-4,
+                            'velocity_field_generator': 'SteadyVelocityField',
+                            'velocity_field_input': {'u_inf': u_inf,
+                                                     'u_inf_direction': [1., 0., 0.]},
+                            'rho': rho,
+                            'n_time_steps': 1,
+                            'dt': dt,
+                            'gamma_dot_filtering': 3,
+                           'vortex_radius': 1e-10}
+
+    settings['DynamicCoupled'] = {'print_info': 'on',
+                                  'structural_substeps': 10,
+                                  'dynamic_relaxation': 'on',
+                                  'clean_up_previous_solution': 'on',
+                                  'structural_solver': 'NonLinearDynamicPrescribedStep',
+                                  'structural_solver_settings': settings['NonLinearDynamicPrescribedStep'],
+                                  'aero_solver': 'StepUvlm',
+                                  'aero_solver_settings': settings['StepUvlm'],
+                                  'fsi_substeps': 200,
+                                  'fsi_tolerance': 1e-6,
+                                  'relaxation_factor': 0.2,
+                                  'minimum_steps': 1,
+                                  'relaxation_steps': 150,
+                                  'final_relaxation_factor': 0.0,
+                                  'n_time_steps': 1,
+                                  'dt': dt,
+                                  'include_unsteady_force_contribution': 'off',
+                                  'postprocessors': [],
+                                  'postprocessors_settings': {'BeamLoads': {'csv_output': 'off'},
+                                                              'BeamPlot': {'include_rbm': 'on',
+                                                                           'include_applied_forces': 'on'},
+                                                              'StallCheck': {},
+                                                              'AerogridPlot': {
+                                                                  'u_inf': u_inf,
+                                                                  'include_rbm': 'on',
+                                                                  'include_applied_forces': 'on',
+                                                                  'minus_m_star': 0},
+                                                            }}
+    
+    pazy.config['DynamicCoupled'] = settings['DynamicCoupled']
     pazy.config.write()
 
-    print('Running {}'.format(pazy.case_route + '/' + pazy.case_name + '.sharpy'))
     sharpy.sharpy_main.main(['', pazy.case_route + '/' + pazy.case_name + '.sharpy'])
 
 
-if __name__ == '__main__':
+if __name__== '__main__':
     from datetime import datetime
+    u_inf_vec = np.linspace(10, 80, 5)
+    # u_inf_vec = [83]
 
-    alpha = 0
-    u_inf = 1
+    alpha =  5.
     gravity_on = False
     skin_on = True
+    trailing_edge_weight = False
 
     M = 16
-    N = 1  # michigan discretisation
-    Ms = 10
-    # M = 6
-    # N = 2  # michigan discretisation
-    # Ms = 5
+    N = 1
+    Ms = 20
 
-    batch_log = 'batch_log_alpha{:04g}'.format(alpha * 100)
+    batch_log = 'batch_log_alpha{:04g}'.format(alpha*100)
 
     with open('./{:s}.txt'.format(batch_log), 'w') as f:
-        # dd/mm/YY H:M:S
         now = datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
         f.write('SHARPy launch - START\n')
-        f.write('Date and time = %s\n\n' % dt_string)
+        f.write("date and time = %s\n\n" % dt_string)
 
-    print('RUNNING SHARPY %f\n' % u_inf)
-    case_name = 'pazi_uinf{:04g}_alpha{:04g}_norom'.format(u_inf * 10, alpha * 100)
-    try:
-        generate_pazy(u_inf, case_name,
-                      output_folder='/output/te_mass_pazy_um{:g}N{:g}Ms{:g}_alpha{:04g}_skin{:g}/'.format(M, N, Ms,
-                                                                                                 alpha * 100,
-                                                                                                 skin_on),
-                      cases_subfolder='/te_massM{:g}N{:g}Ms{:g}/'.format(M, N, Ms),
-                      M=M, N=N, Ms=Ms, alpha=alpha,
-                      gravity_on=gravity_on,
-                      skin_on=skin_on,
-                      trailing_edge_weight=True)
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-    except AssertionError:
-        now = datetime.now()
-        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        with open('./{:s}.txt'.format(batch_log), 'a') as f:
-            f.write('%s ERROR RUNNING case %f\n\n' % (dt_string, u_inf))
+    for i, u_inf in enumerate(u_inf_vec):
+        print('RUNNING SHARPY %f %f\n' % (alpha, u_inf))
+        case_name = 'pazy_uinf{:04g}_alpha{:04g}'.format(u_inf*10, alpha*100)
+        try:
+            generate_pazy(u_inf, case_name,
+                          output_folder='/output/pazy_M{:g}N{:g}Ms{:g}_alpha{:04g}_skin{:g}_te{:g}/'.format(
+                              M, N, Ms, alpha*100, skin_on, trailing_edge_weight),
+                          cases_subfolder='/M{:g}N{:g}Ms{:g}_skin{:g}_te{:g}/'.format(
+                              M, N, Ms, skin_on, trailing_edge_weight),
+                          M=M, N=N, Ms=Ms, alpha=alpha,
+                          gravity_on=gravity_on,
+                          skin_on=skin_on,
+                          trailing_edge_weight=trailing_edge_weight)
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            with open('./{:s}.txt'.format(batch_log), 'a') as f:
+                f.write('%s Ran case %i :::: u_inf = %f\n\n' % (dt_string, i, u_inf))
+        except AssertionError:
+            now = datetime.now()
+            dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+            with open('./{:s}.txt'.format(batch_log), 'a') as f:
+                f.write('%s ERROR RUNNING case %f\n\n' % (dt_string, u_inf))
 
 
