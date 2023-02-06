@@ -198,7 +198,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                         'mean': 0.}
         if test_case_settings is not None:
             gust_settings['frequency'] = test_case_settings['frequency_gust_vane']
-        cs_deflection_file = '/home/sduess/Documents/Aircraft Models/Pazy/pazy-gust-response/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(gust_amplitude, gust_frequency, 0)
+        cs_deflection_file = route_test_dir + '/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(gust_amplitude, gust_frequency, 0)
         cs_deflection_file = write_deflection_file(n_tstep, dt,  gust_settings['amplitude'],  gust_settings['frequency'],  gust_settings['mean'])
 
 
