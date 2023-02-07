@@ -17,9 +17,9 @@ import sharpy.utils.algebra as algebra
 route_test_dir = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
 
 def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings,
+                                    surface_m = 4, 
                                     u_inf = 1, 
                                     rho = 1.225, 
-                                    surface_m = 4, 
                                     gust_vanes = False,
                                      alpha = np.deg2rad(5.), 
                                      symmetry_condition = False, 
@@ -425,7 +425,10 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                     'offset': 0,
                     'intensity': 0.2,
                     }
-    set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_settings, pazy_model_settings['surface_m'], 
+    set_simulation_settings_dynamic(case_name,
+                                    output_folder, 
+                                    case_route, gust_settings,
+                                    surface_m = pazy_model_settings['surface_m'], 
                                     gust_vanes = gust_vanes, 
                                     symmetry_condition = symmetry_condition, 
                                     model_id = model_id, 
