@@ -198,7 +198,6 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                         'mean': 0.}
         if test_case_settings is not None:
             gust_settings['frequency'] = test_case_settings['frequency_gust_vane']
-        cs_deflection_file = route_test_dir + '/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(gust_amplitude, gust_frequency, 0)
         cs_deflection_file = write_deflection_file(n_tstep, dt,  gust_settings['amplitude'],  gust_settings['frequency'],  gust_settings['mean'])
 
 
@@ -346,19 +345,11 @@ def setup_pazy_model(case_name, case_route, pazy_settings, gust_vanes = False, s
     return pazy
 
 def write_deflection_file(n_tstep, dt, amplitude, frequency, mean):
-    cs_deflection_file = '/home/sduess/Documents/Aircraft Models/Pazy/pazy-gust-response/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(amplitude, frequency, mean)
+    cs_deflection_file = route_test_dir + '/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(amplitude, frequency, 0)
     time = np.linspace(0., n_tstep * dt, n_tstep)
-    cs_deflection_prescribed = float(amplitude) * np.sin(2 * np.pi * float(frequency) * time) #* np.exp(-0.9 * time)
-
-    import matplotlib.pyplot as plt
-    plt.plot(time, np.rad2deg(cs_deflection_prescribed))
-    
-    # cs_deflection_prescribed = float(amplitude) * np.sin(2 * np.pi * float(frequency) * time  + np.pi/2)
-    initial_deflection = cs_deflection_prescribed[0]
-    # plt.plot(time, cs_deflection_prescribed_shifted, '--')
-    plt.show()
-    print("find closest to amplitude = ", find_index_of_closest_entry(cs_deflection_prescribed, float(amplitude)))
-    n_tsteps_wo_deflection = 10
+    cs_deflection_prescribed = float(amplitude) * np.sin(2 * np.pi * float(frequency) * time)    
+    initial_deflection = 0
+    n_tsteps_wo_deflection = 0
     cs_deflection_prescribed = np.insert(cs_deflection_prescribed, 0 , initial_deflection * np.ones((n_tsteps_wo_deflection)))
     cs_deflection_prescribed = np.delete(cs_deflection_prescribed,list(range(n_tstep- n_tsteps_wo_deflection, n_tstep)))
     np.savetxt(cs_deflection_file, cs_deflection_prescribed)
@@ -395,18 +386,16 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                         'discretisation_method': 'michigan',
                         'model_id': model_id,
                         'num_elem': 2,
-                        'surface_m': 16, #16,
+                        'surface_m': 16,
                         'symmetry_condition': symmetry_condition,
                         # 'polars':generate_polar_arrays(airfoil_polar)
                         }
-    case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic_gust_vanes'.format(case, int(use_polars)) #_alpha_{:04g}'.format(100*test_case_settings['alpha']) #pazy_dynamic_alpha_587_gust_vane_test' #'pazy_modal_delft_aplha_12_symmetry_steady'
-    # case_name = 'pazy_vertical_alpha_{:02g}_polars{:g}'.format(test_case_settings['alpha'], int(use_polars))
-    # case_name = 'pazy_vertical_case_{}_polars{:g}'.format(case, int(use_polars))
+    case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic_gust_vanes'.format(case, int(use_polars)) 
     case_route = case_root + '/' + case_name + '/'
 
     if not os.path.isdir(case_route):
         os.makedirs(case_route, exist_ok=True)
-    # print("airfoil polar = ", generate_polar_arrays(airfoil_polar))
+        
     if airfoil_polar is not None:
         polar_arrays=generate_polar_arrays(airfoil_polar)
     else:
