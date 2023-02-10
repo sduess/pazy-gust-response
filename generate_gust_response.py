@@ -84,7 +84,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                  'AerogridPlot',
                  'DynamicCoupled',
                 'SaveData',
-                'PickleData'
+                # 'PickleData'
                  ],
         'case': case_name, 'route': case_route,
         'write_screen': 'on', 'write_log': 'on',
@@ -252,7 +252,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         'print_info': True,
         'dt': dt,
         'include_unsteady_force_contribution': True, 
-        'postprocessors': ['BeamLoads', 'BeamPlot', 'AerogridPlot', 'SaveData'],
+        'postprocessors': ['BeamLoads', 'BeamPlot', 'AerogridPlot', 'SaveData', 'PickleData'],
         'postprocessors_settings': {
                                     'BeamLoads': {'csv_output': 'off'},
                                     'BeamPlot': {'include_rbm': 'on',
@@ -263,6 +263,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                         # 'minus_m_star': 60,
                                         },
                                     'SaveData': settings['SaveData'],
+                                    'PickleData': {},
                                     },
     }
 

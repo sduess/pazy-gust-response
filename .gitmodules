@@ -4,3 +4,6 @@
 [submodule "lib/sharpy"]
 	path = lib/sharpy
 	url = https://github.com/ImperialCollegeLondon/sharpy/
+[submodule "lib/sharpy-analysis-tools"]
+	path = lib/sharpy-analysis-tools
+	url = https://github.com/ngoiz/sharpy-analysis-tools
