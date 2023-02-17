@@ -391,7 +391,9 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                         'symmetry_condition': symmetry_condition,
                         # 'polars':generate_polar_arrays(airfoil_polar)
                         }
-    case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic_gust_vanes'.format(case, int(use_polars)) 
+    case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic'.format(case, int(use_polars)) 
+    if gust_vanes:
+        case_name +='_gust_vanes'
     case_route = case_root + '/' + case_name + '/'
 
     if not os.path.isdir(case_route):
