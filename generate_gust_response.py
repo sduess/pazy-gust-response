@@ -434,18 +434,18 @@ if __name__ == '__main__':
     # alpha_vec = np.arange(-9, 15, 3)
     dict_test_cases = {'1': {'alpha': np.deg2rad(5.),
                              'u_inf': 18.3,
-                             'gust_T': 0.3125,#0.175439,
+                             'gust_T': 0.3125, 
                              'frequency_gust_vane': 5.7, #Hz
-                             'gust_amplitude':0.805562,
+                             'gust_amplitude':0.81, 
                              },
                         '2': {'alpha': np.deg2rad(10.),
                              'u_inf': 18.3,
-                             'gust_T': 0.175439, #0.3125,
-                             'frequency_gust_vane': 3.2, #Hz
-                             'gust_amplitude':0.64458}}
+                             'gust_T': 0.175439,
+                             'frequency_gust_vane': 3.2,
+                             'gust_amplitude':0.65}}
     
-    # for icase in list(dict_test_cases.keys()):
-    #     dict_test_cases[icase]['gust_T'] = dict_test_cases[icase]['frequency_gust_vane']/dict_test_cases[icase]['u_inf']
+    for icase in list(dict_test_cases.keys()):
+        dict_test_cases[icase]['gust_T'] = 1/ dict_test_cases[icase]['frequency_gust_vane'] #/dict_test_cases[icase]['u_inf']
     
 
     vertical = False
