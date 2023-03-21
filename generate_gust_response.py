@@ -32,22 +32,20 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     config = configobj.ConfigObj()
     config.filename = case_route + '/{}.sharpy'.format(case_name)
     settings = dict()
-    gravity = False
-    n_step = 5
-    structural_relaxation_factor = 0.6
-    relaxation_factor = 0.2
+    num_load_steps = 5
+    # structural_relaxation_factor = 0.6
+    # relaxation_factor = 0.2
     tolerance = 1e-6 #
     fsi_tolerance = 1e-4 #
     num_cores = 4
     variable_wake =  False 
-    horseshoe = True
+    horseshoe = False
     u_inf = 18.3
     rho = 1.205
 
     chord = 0.1
     CFL = 1
     dt = CFL * chord / surface_m / u_inf
-    
     n_tstep = 10000
     alpha = np.deg2rad(5.)
     gust_frequency = 5.7 # Hz
@@ -113,7 +111,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
 
     settings['NonLinearStatic'] = {'print_info': 'off',
                                    'max_iterations': 1000,
-                                   'num_load_steps': 12,
+                                   'num_load_steps': num_load_steps,
                                    # 'num_steps': 10,
                                    # 'dt': 2.5e-4,
                                    'delta_curved': 1e-5,
@@ -202,8 +200,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
 
 
     settings['StepUvlm'] = {'num_cores': num_cores,
-                            'convection_scheme': 3,
-                            'gamma_dot_filtering': 7,
+                            'convection_scheme': convection_scheme,
+                            'gamma_dot_filtering': 0,
                             'cfl1': bool(not variable_wake),
                             # 'velocity_field_generator': 'SteadyVelocityField',
                             # 'velocity_field_input': {'u_inf':u_inf,
@@ -450,22 +448,24 @@ if __name__ == '__main__':
     #     dict_test_cases[icase]['gust_T'] = dict_test_cases[icase]['frequency_gust_vane']/dict_test_cases[icase]['u_inf']
     
 
-    vertical = True #False
+    vertical = False
+    gravity = False
+    convection_scheme = 2 # automatically set to three if gust vanes are considered
     model_id = 'delft'
-    use_polars = False #True
+    use_polars = False 
     airfoil_polar = None
     efficiency_correction = False
     if efficiency_correction and use_polars:
         raise
 
-    gust_vanes = True #False
+    gust_vanes = False
     if use_polars:
         airfoil_polar = {
             0: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
             1: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
                         }
-    symmetry_condition = False # True #False 
-    case = 2 #2
+    symmetry_condition = False
+    case = 2
     # print("alpha vec", alpha_vec)
     # for alpha in alpha_vec:
     #     dict_test_cases[str(case)]['alpha'] = alpha
