@@ -27,7 +27,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                      test_case_settings = None, 
                                      use_polars=False, 
                                      efficiency_correction=False,
-                                     vertical=True):
+                                     vertical=True,
+                                     restart=False):
      # simulation settings
     config = configobj.ConfigObj()
     config.filename = case_route + '/{}.sharpy'.format(case_name)
@@ -88,6 +89,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         'write_screen': 'on', 'write_log': 'on',
         'log_folder': output_folder + '/' + case_name + '/',
         'log_file': case_name + '.log'}
+    if restart:
+        settings['SHARPy']['flow'] = ['DynamicCoupled']
     print("\n\nALPHA  = ", alpha)
     print("delft model = ", model_id)
     if vertical:
@@ -378,7 +381,8 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                                                       use_polars=False, 
                                                       efficiency_correction=False,
                                                       model_id='delft',
-                                                      vertical=True):
+                                                      vertical=True,
+                                                      restart=False):
     # pazy model settings
     # Norberto:  M = 16, N = 64
     pazy_model_settings = {'skin_on': skin_on,
@@ -425,8 +429,8 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                                     test_case_settings = test_case_settings,
                                     use_polars=use_polars,
                                     efficiency_correction=efficiency_correction,
-                                    vertical=vertical)
-
+                                    vertical=vertical,
+                                    restart=restart)
     data = sharpy.sharpy_main.main(['', case_route + case_name + '.sharpy'])
     return data
 
@@ -459,6 +463,7 @@ if __name__ == '__main__':
         raise
 
     gust_vanes = False
+    restart = True
     if use_polars:
         airfoil_polar = {
             0: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
@@ -481,7 +486,8 @@ if __name__ == '__main__':
                                                             use_polars=use_polars,
                                                             efficiency_correction=efficiency_correction,
                                                             model_id=model_id,
-                                                            vertical=vertical
+                                                            vertical=vertical,
+                                                            restart=restart
                                                             )
                                              
 
