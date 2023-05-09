@@ -28,7 +28,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                      use_polars=False, 
                                      efficiency_correction=False,
                                      vertical=True,
-                                     restart=False):
+                                     restart=False,
+                                     only_gust_vanes=False):
      # simulation settings
     config = configobj.ConfigObj()
     config.filename = case_route + '/{}.sharpy'.format(case_name)
@@ -111,7 +112,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         'wake_shape_generator': 'StraightWake',
         'wake_shape_generator_input': {'u_inf': u_inf,
                                        'dt': dt}}
-
+    if only_gust_vanes:
+        settings['AerogridLoader']['mstar'] = 20
     settings['NonLinearStatic'] = {'print_info': 'off',
                                    'max_iterations': 1000,
                                    'num_load_steps': num_load_steps,
@@ -173,7 +175,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         'structural_solver_settings': settings['NonLinearStatic']}
 
     settings['LiftDistribution'] = {'coefficients': True,
-                                    'rho': 1.225}
+                                    'rho': rho}
     settings['BeamPlot'] = {}
 
     settings['AerogridPlot'] = {'include_rbm': 'off',
@@ -290,6 +292,9 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                                                        'vane_parameters': [gust_vane_parameters, gust_vane_parameters],
                                                                        'vertical': vertical
                                                                       }
+        if only_gust_vanes:
+            for i in range(settings['AerogridLoader']['gust_vanes_generator_settings']['n_vanes']):
+                settings['AerogridLoader']['gust_vanes_generator_settings']['streamwise_position'][i] -= 10000
     
         settings['StepUvlm']['convection_scheme'] = 3
         settings['StepUvlm']['velocity_field_generator'] = 'SteadyVelocityField'
@@ -325,7 +330,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     config.write()
     return settings
 
-def setup_pazy_model(case_name, case_route, pazy_settings, gust_vanes = False, symmetry_condition = False, polars=None, vertical=True):
+def setup_pazy_model(case_name, case_route, pazy_settings, gust_vanes = False, symmetry_condition = False, polars=None, vertical=True, only_gust_vanes=False):
     pazy = PazyWing(case_name, case_route, pazy_settings)
     pazy.generate_structure()
     if not symmetry_condition:
@@ -382,20 +387,28 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                                                       efficiency_correction=False,
                                                       model_id='delft',
                                                       vertical=True,
-                                                      restart=False):
+                                                      restart=False,
+                                                      only_gust_vanes=False):
     # pazy model settings
     # Norberto:  M = 16, N = 64
     pazy_model_settings = {'skin_on': skin_on,
                         'discretisation_method': 'michigan',
                         'model_id': model_id,
                         'num_elem': 2,
-                        'surface_m': 16,
+                        'surface_m': 8,
                         'symmetry_condition': symmetry_condition,
                         # 'polars':generate_polar_arrays(airfoil_polar)
                         }
-    case_name = 'pazy_vertical_case_{}_polars{:g}_dynamic'.format(case, int(use_polars)) 
+    if only_gust_vanes:
+        pazy_model_settings['discretisation_method'] = 'even'
+        pazy_model_settings['num_elem'] = 4
+        pazy_model_settings['x_correction'] = 10000
+
+    case_name = 'pazy_vertical_case_{}_polars{:g}_effcor_{:g}dynamic_m8_gust_vanes_only'.format(case, int(use_polars), int(efficiency_correction)) 
     if gust_vanes:
         case_name +='_gust_vanes'
+    if restart:
+        case_name += '_restart'
     case_route = case_root + '/' + case_name + '/'
 
     if not os.path.isdir(case_route):
@@ -410,7 +423,8 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                      pazy_model_settings, 
                      symmetry_condition=symmetry_condition,
                      polars=polar_arrays,
-                     vertical=vertical)
+                     vertical=vertical,
+                     only_gust_vanes=only_gust_vanes)
     if airfoil_polar is not None:
         use_polars = True
     else:
@@ -430,7 +444,8 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
                                     use_polars=use_polars,
                                     efficiency_correction=efficiency_correction,
                                     vertical=vertical,
-                                    restart=restart)
+                                    restart=restart,
+                                    only_gust_vanes=only_gust_vanes)
     data = sharpy.sharpy_main.main(['', case_route + case_name + '.sharpy'])
     return data
 
@@ -452,8 +467,8 @@ if __name__ == '__main__':
         dict_test_cases[icase]['gust_T'] = 1/ dict_test_cases[icase]['frequency_gust_vane'] #/dict_test_cases[icase]['u_inf']
     
 
-    vertical = False
-    gravity = False
+    vertical = True
+    gravity = True
     convection_scheme = 2 # automatically set to three if gust vanes are considered
     model_id = 'delft'
     use_polars = False 
@@ -462,21 +477,23 @@ if __name__ == '__main__':
     if efficiency_correction and use_polars:
         raise
 
-    gust_vanes = False
-    restart = True
+    gust_vanes = True #False
+    only_gust_vanes = True
+    restart = False
     if use_polars:
         airfoil_polar = {
             0: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
             1: route_test_dir + '/lib/pazy-model/src/airfoil_polars//xfoil_seq_re120000_naca0018.txt',
                         }
-    symmetry_condition = False
+    symmetry_condition = True
     case = 2
+    case_root =  '../01_case_files/' #'./cases/'
     # print("alpha vec", alpha_vec)
     # for alpha in alpha_vec:
     #     dict_test_cases[str(case)]['alpha'] = alpha
     #     print(alpha)
     data = run_dynamic_prescriped_simulation_with_gust_input(skin_on='on',
-                                                            case_root='./cases/',
+                                                            case_root=case_root,
                                                             output_folder='./output/',
                                                             gust_vanes = gust_vanes,
                                                             symmetry_condition = symmetry_condition,
@@ -487,7 +504,8 @@ if __name__ == '__main__':
                                                             efficiency_correction=efficiency_correction,
                                                             model_id=model_id,
                                                             vertical=vertical,
-                                                            restart=restart
+                                                            restart=restart,
+                                                            only_gust_vanes=only_gust_vanes
                                                             )
                                              
 
