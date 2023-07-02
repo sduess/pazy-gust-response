@@ -1,0 +1,8 @@
+Gust 1: f=5.7Hz, geometric angle of attack 05 degrees
+Gust 2: f=3.2Hz, geometric angle of attack 10 degrees
+"deflection" files contain out-of-plane deflections of the wing based on marker measurements.
+Wing twist was not investigated!
+8 chordwise markers (4 per side) were averaged and smoothed with a sinusoidal fit to yield 15/14 spanwise data points.
+The markers were painted on the rib locations and the tip rod. The tip could not be tracked for gust 2.
+The sinusoidal fit is conducted in the reference system of the deformed wing so that the spanwise coordinate also varies in time.
+The spanwise position corresponding to the deflection measurements are contained in the "coordinates" files.
