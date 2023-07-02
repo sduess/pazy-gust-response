@@ -48,7 +48,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
     chord = 0.1
     CFL = 1
     dt = CFL * chord / surface_m / u_inf
-    n_tstep = 10000
+    n_tstep = 6000
     alpha = np.deg2rad(5.)
     gust_frequency = 5.7 # Hz
     gust_T = 0.175439 #s 
@@ -255,7 +255,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
         'print_info': True,
         'dt': dt,
         'include_unsteady_force_contribution': True, 
-        'postprocessors': ['BeamLoads', 'BeamPlot', 'AerogridPlot', 'SaveData', 'PickleData'],
+        'postprocessors': ['BeamLoads', 'BeamPlot', 'AerogridPlot', 'SaveData'], #, 'PickleData'],
         'postprocessors_settings': {
                                     'BeamLoads': {'csv_output': 'off'},
                                     'BeamPlot': {'include_rbm': 'on',
@@ -266,7 +266,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                         # 'minus_m_star': 60,
                                         },
                                     'SaveData': settings['SaveData'],
-                                    'PickleData': {},
+                                    # 'PickleData': {},
                                     },
     }
 
@@ -294,7 +294,8 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                                                                       }
         if only_gust_vanes:
             for i in range(settings['AerogridLoader']['gust_vanes_generator_settings']['n_vanes']):
-                settings['AerogridLoader']['gust_vanes_generator_settings']['streamwise_position'][i] -= 10000
+                settings['AerogridLoader']['gust_vanes_generator_settings']['streamwise_position'][i] -= 20
+                settings['AerogridLoader']['mstar'] = 20
     
         settings['StepUvlm']['convection_scheme'] = 3
         settings['StepUvlm']['velocity_field_generator'] = 'SteadyVelocityField'
@@ -351,8 +352,8 @@ def setup_pazy_model(case_name, case_route, pazy_settings, gust_vanes = False, s
     pazy.save_files()
     return pazy
 
-def write_deflection_file(n_tstep, dt, amplitude, frequency, mean):
-    cs_deflection_file = route_test_dir + '/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}.csv'.format(amplitude, frequency, 0)
+def write_deflection_file(n_tstep, dt, amplitude, frequency, mean, surface_m):
+    cs_deflection_file = route_test_dir + '/02_gust_vanes/cs_deflection_amplitude_{}_frequency_{}_mean_{}_m{}.csv'.format(amplitude, frequency, 0, surface_m)
     time = np.linspace(0., n_tstep * dt, n_tstep)
     cs_deflection_prescribed = float(amplitude) * np.sin(2 * np.pi * float(frequency) * time)    
     initial_deflection = 0
@@ -402,11 +403,12 @@ def run_dynamic_prescriped_simulation_with_gust_input(skin_on, case_root='./case
     if only_gust_vanes:
         pazy_model_settings['discretisation_method'] = 'even'
         pazy_model_settings['num_elem'] = 4
-        pazy_model_settings['x_correction'] = 10000
 
-    case_name = 'pazy_vertical_case_{}_polars{:g}_effcor_{:g}dynamic_m8_gust_vanes_only'.format(case, int(use_polars), int(efficiency_correction)) 
+    case_name = 'pazy_vertical_case_{}_polars{:g}_effcor_{:g}dynamic_m{}'.format(case, int(use_polars), int(efficiency_correction), pazy_model_settings['surface_m']) 
     if gust_vanes:
         case_name +='_gust_vanes'
+        if only_gust_vanes:
+            case_name +='_only'
     if restart:
         case_name += '_restart'
     case_route = case_root + '/' + case_name + '/'
@@ -453,13 +455,13 @@ if __name__ == '__main__':
     # alpha_vec = np.arange(-9, 15, 3)
     dict_test_cases = {'1': {'alpha': np.deg2rad(5.),
                              'u_inf': 18.3,
-                             'gust_T': 0.3125, 
+                             'gust_T': 0.175439,#0.3125, 
                              'frequency_gust_vane': 5.7, #Hz
                              'gust_amplitude':0.81, 
                              },
                         '2': {'alpha': np.deg2rad(10.),
                              'u_inf': 18.3,
-                             'gust_T': 0.175439,
+                             'gust_T': 0.3125, #0.175439,
                              'frequency_gust_vane': 3.2,
                              'gust_amplitude':0.65}}
     
