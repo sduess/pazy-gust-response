@@ -201,7 +201,7 @@ def set_simulation_settings_dynamic(case_name, output_folder, case_route, gust_s
                         'mean': 0.}
         if test_case_settings is not None:
             gust_settings['frequency'] = test_case_settings['frequency_gust_vane']
-        cs_deflection_file = write_deflection_file(n_tstep, dt,  gust_settings['amplitude'],  gust_settings['frequency'],  gust_settings['mean'])
+        cs_deflection_file = write_deflection_file(n_tstep, dt,  gust_settings['amplitude'],  gust_settings['frequency'],  gust_settings['mean'], surface_m)
 
 
     settings['StepUvlm'] = {'num_cores': num_cores,
