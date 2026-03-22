@@ -4,13 +4,13 @@ This repository contains the scripts and code used for the SHARPy simulations ob
 
 [1] Duessler, S., Mertens, C., & Palacios, R. Gust Response Predictions of a Very Flexible Wing Model. AIAA Journal, 2025. (https://doi.org/10.2514/1.C038332)
 
-In this paper, nonlinear aeroelastic simulations are benchmarked against wind tunnel experiments of a very flexible wing [2]. To do so, sectional force corrections are employed in static and dynamic nonlinear aeroelastic simulations to capture low-Reynolds-number effects and the static lift deficiency due to the onset of flow separation. 
+Nonlinear aeroelastic simulations are benchmarked against wind tunnel experiments of a very flexible wing [2]. To do so, sectional force corrections are employed in static and dynamic nonlinear aeroelastic simulations to capture low-Reynolds-number effects and the static lift deficiency due to the onset of flow separation. 
 
-<video src="assets/gust_vanes.mp4" controls width="100%"></video>
 <p align="center">
+<img src="https://github.com/user-attachments/assets/3f585f7d-e3fb-4a0e-84a1-eba96c6e129a" width="60%">
+<br>
 <strong>Visualization of the induced deformation of a very flexible wing by the gust vane wakes.</strong>
 </p>
-
 
 As an alternative to a frozen gust model, a simulation of the unsteady inflow to the Delft-Pazy wing that is produced by the gust vanes in the wind tunnel is explored. Results show a considerable influence of the wing's presence on the upstream gust velocity. The structural response, however, differs only slightly between the two gust models, confirming that the uniform gust assumption remains valid for moderately large deflections (up to 24% of the wingspan).
 
@@ -21,7 +21,7 @@ These enhancements have been implemented to the nonlinear aeroelastic simulation
 ### 1. Clone the repository
 
 ```bash
-git clone --recurse-submodules <repository-url>
+git clone --recurse-submodules https://github.com/sduess/pazy-gust-response
 cd pazy-gust-response
 ```
 
@@ -33,7 +33,7 @@ git submodule update --init --recursive
 
 ### 2. Install SHARPy
 
-Follow the [SHARPy installation guide](https://ic-sharpy.readthedocs.io/en/latest/content/installation.html) to create the `sharpy` conda environment. The SHARPy version extensively last tested with this code is version 2.4.
+Follow the [SHARPy installation guide](https://ic-sharpy.readthedocs.io/en/latest/content/installation.html) to create the `sharpy` conda environment. This code was last tested with SHARPy version 2.4 and the code changes in the SHARPy submodule of this repository.
 
 ### 3. Activate the environment and install packages
 
