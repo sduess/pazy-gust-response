@@ -1,5 +1,8 @@
 import numpy as np
 import os
+
+_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+_PROJECT_ROOT = os.path.dirname(_DIR)
 import h5py as h5
 import utils
 from typing import Tuple, List
@@ -228,12 +231,10 @@ def compute_phase_shift(period_of_gust_velocity: np.ndarray) -> tuple[float, int
     return phase_shift, idx_max
 
 if __name__ == '__main__':
-    result_folder = '../output/'
+    result_folder = os.path.join(_PROJECT_ROOT, "output")
     case_name = 'pazy_vertical_case_2_polars0_effcor_0dynamic_m8_not_symmetric' #'pazy_dynamic_alpha_{}_polars{}_effcor_{}'
-    output_folder = os.path.join('../results/extracted_data/'+case_name)
-
-    experimental_data = os.path.join(os.path.abspath(os.path.dirname(os.path.realpath(__file__))),
-                                     '../experimental_data')
+    output_folder = os.path.join(_PROJECT_ROOT, "results", "extracted_data", case_name)
+    experimental_data = os.path.join(_PROJECT_ROOT, "experimental_data")
     icase = 2
     data_output_file = os.path.join(output_folder,'dynamic_{}_{}.dat')
     if not os.path.exists(output_folder):

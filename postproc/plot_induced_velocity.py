@@ -25,6 +25,9 @@ Grid structure (spanwise_slices=True)
 """
 
 import os
+
+_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+_PROJECT_ROOT = os.path.dirname(_DIR)
 from pathlib import Path
 from typing import Optional
 
@@ -410,7 +413,7 @@ def animate_velocity_field_in_plane(
 # ─────────────────────────────── example usage ───────────────────────────────
 
 if __name__ == "__main__":
-    data_dir = "../results/extracted_data/pazy_vertical_case_1_polars0_effcor_0_dynamic_m8_gust_vanes"
+    data_dir = os.path.join(_PROJECT_ROOT, "results", "extracted_data", "pazy_vertical_case_1_polars0_effcor_0_dynamic_m8_gust_vanes")
     case = "pazy_vertical_case_1_polars0_effcor_0_dynamic_m8_gust_vanes"
 
     chord = 0.1  # Pazy wing chord [m]
@@ -427,7 +430,7 @@ if __name__ == "__main__":
         scan_range=(-0.24410, -0.044100),
         chord=chord,
         amplitude_mode="amplitude",
-        save_path="../results/extracted_data/induced_vel_1d_peak_uz_vs_x.png",
+        save_path=os.path.join(_PROJECT_ROOT, "results", "extracted_data", "induced_vel_1d_peak_uz_vs_x.png"),
     )
     plt.show()
 
@@ -446,6 +449,6 @@ if __name__ == "__main__":
         clim=(-4.0, 4.0),
         colorbar_location="bottom",
         fps=15,
-        save_path="../results/extracted_data/induced_vel_animation.gif",
+        save_path=os.path.join(_PROJECT_ROOT, "results", "extracted_data", "induced_vel_animation.gif"),
     )
     plt.show()

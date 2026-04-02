@@ -10,6 +10,7 @@ import utils.helpers as utils
 from sharpy.utils.datastructures import AeroTimeStepInfo
 
 _DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+_PROJECT_ROOT = os.path.dirname(_DIR)
 
 from pazy_wing_model import PazyWing  # noqa: E402
 
@@ -310,7 +311,7 @@ def export_induced_velocities(
 if __name__ == "__main__":
     chord, wing_span, ea_main = get_pazy_geometry(model_id="delft")
 
-    result_folder = "../output"
+    result_folder = os.path.join(_PROJECT_ROOT, "output")
     case = "pazy_vertical_case_1_polars0_effcor_0_dynamic_m8_gust_vanes"
     symmetry_condition = True
     use_collocation_points = False
@@ -328,7 +329,7 @@ if __name__ == "__main__":
     ts_start = 3000
     nts = 900
 
-    output_folder = os.path.join("../results/extracted_data/", case)
+    output_folder = os.path.join(_PROJECT_ROOT, "results", "extracted_data", case)
     os.makedirs(output_folder, exist_ok=True)
     h5_file = os.path.join(result_folder, case, case, "savedata", case + ".data.h5")
 

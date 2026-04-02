@@ -1,5 +1,8 @@
 import os
 
+_DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+_PROJECT_ROOT = os.path.dirname(_DIR)
+
 import matplotlib.pyplot as plt
 import numpy as np
 import utils.experimental_data as reference_utils
@@ -81,13 +84,10 @@ def postproc_static_results(
 
 
 if __name__ == "__main__":
-    output_folder = "../output/"
+    output_folder = os.path.join(_PROJECT_ROOT, "output")
     case_format_str = "pazy_steady_alpha_{}_polars{}_effcor_{}"
-    plot_file = os.path.join("../results/plots/static_deformation.png")
-    experimental_data = os.path.join(
-        os.path.abspath(os.path.dirname(os.path.realpath(__file__))),
-        "../experimental_data",
-    )
+    plot_file = os.path.join(_PROJECT_ROOT, "results", "plots", "static_deformation.png")
+    experimental_data = os.path.join(_PROJECT_ROOT, "experimental_data")
     pazy_half_span = 0.55
     vertical = True
 

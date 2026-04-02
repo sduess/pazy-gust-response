@@ -14,6 +14,7 @@ from case_generation.settings_classes import (
 )
 
 _DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+_PROJECT_ROOT = os.path.dirname(_DIR)
 
 # Fixed simulation constants
 _N_TSTEP = 6000
@@ -193,7 +194,7 @@ def generate_dynamic_gust_response_pazy():
     use_polars = False
     efficiency_correction = False
     airfoil_polar_file = os.path.join(
-        _DIR, "../lib/pazy-model/src/airfoil_polars/xfoil_seq_re120000_naca0018.txt"
+        _PROJECT_ROOT, "lib/pazy-model/src/airfoil_polars/xfoil_seq_re120000_naca0018.txt"
     )
     airfoil_polar = force_correction_utils.setup_force_correction(
         airfoil_polar_file, use_polars, efficiency_correction
@@ -201,9 +202,9 @@ def generate_dynamic_gust_response_pazy():
 
     sim = SimulationRunSettings(
         case=case_id,
-        case_root="./cases/",
-        output_folder="./output/",
-        gust_vanes=True,
+        case_root=os.path.join(_PROJECT_ROOT, "cases"),
+        output_folder=os.path.join(_PROJECT_ROOT, "output"),
+        gust_vanes=False,
         symmetry_condition=True,
         test_case_settings=test_cases[case_id],
         airfoil_polar=airfoil_polar,

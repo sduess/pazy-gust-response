@@ -13,6 +13,7 @@ from case_generation.settings_classes import (
 )
 
 _DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+_PROJECT_ROOT = os.path.dirname(_DIR)
 
 _N_TSTEP = 2000
 _CFL = 1
@@ -179,8 +180,8 @@ def main():
 
     sim = SimulationRunSettings(
         case=case_id,
-        case_root="./cases/",
-        output_folder="./output/",
+        case_root=os.path.join(_PROJECT_ROOT, "cases"),
+        output_folder=os.path.join(_PROJECT_ROOT, "output"),
         gust_vanes=True,
         symmetry_condition=True,
         test_case_settings=test_cases[case_id],

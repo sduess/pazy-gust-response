@@ -9,6 +9,7 @@ import sharpy.sharpy_main
 from case_generation.settings_classes import PazyModelSettings, StaticSimulationSettings
 
 _DIR = os.path.abspath(os.path.dirname(os.path.realpath(__file__)))
+_PROJECT_ROOT = os.path.dirname(_DIR)
 
 _CFL = 1
 
@@ -90,17 +91,17 @@ def generate_static_coupled_wing_deformation():
     use_polars = True
     efficiency_correction = False
     airfoil_polar_file = os.path.join(
-        _DIR, "../lib/pazy-model/src/airfoil_polars/xfoil_seq_re120000_naca0018.txt"
+        _PROJECT_ROOT, "lib/pazy-model/src/airfoil_polars/xfoil_seq_re120000_naca0018.txt"
     )
     airfoil_polar = force_correction_utils.setup_force_correction(
         airfoil_polar_file, use_polars, efficiency_correction
     )
-
+    
     sim = StaticSimulationSettings(
         alpha_deg=5,
         u_inf=18.3,
-        case_root="./cases/",
-        output_folder="./output/",
+        case_root=os.path.join(_PROJECT_ROOT, "cases"),
+        output_folder=os.path.join(_PROJECT_ROOT, "output"),
         symmetry_condition=True,
         airfoil_polar=airfoil_polar,
         use_polars=use_polars,
